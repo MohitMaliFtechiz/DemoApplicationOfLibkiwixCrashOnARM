@@ -67,5 +67,8 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("org.kiwix:libkiwix:2.1.1")
+    implementation("com.getkeepsafe.relinker:relinker:1.4.5")
+    // change this below path with your local path
+    implementation(files("/home/acerpc/Desktop/lib-debug.aar"))
+    api(fileTree(mapOf("include" to "*.aar", "dir" to "libs")))
 }
