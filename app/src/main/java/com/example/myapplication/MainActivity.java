@@ -1,10 +1,17 @@
 package com.example.myapplication;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
 import android.util.Log;
+import android.widget.Button;
+import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,22 +27,53 @@ import java.io.OutputStream;
 
 public class MainActivity extends AppCompatActivity {
 
+    private TextView showMediaCountText;
+    private Button showMediaCountButton;
+    private Archive archive;
+
+    // change this path your file path where the splitted file is located in your file system
+    private String zimFilePath = "/storage/emulated/0/kiwix/wikipedia_ar_all_nopic_2024-03.zimaa";
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        showMediaCountText = findViewById(R.id.showMediaCountText);
+        showMediaCountButton = findViewById(R.id.showMediaCountButton);
         String icuData = loadICUData(this);
         JNIKiwix jniKiwix = new JNIKiwix(this);
         jniKiwix.setDataDirectory(icuData);
-        try {
-            Archive archive = new Archive(getZimFilePath());
-            String articlePath = archive.getEntryByPath("favicon.ico")
-                    .getItem(true)
-                    .getPath();
-            Log.e("ZIM_FILE_READER", "getting the favicon path " + articlePath);
-        } catch (Exception e) {
-            Log.e("ZIM_FILE_READER", "Error in getting the favicon path " + e);
-        }
+
+        showMediaCountButton.setOnClickListener(v -> {
+            try {
+                if (archive != null) {
+                    archive.dispose();
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    if (!Environment.isExternalStorageManager()) {
+                        Intent intent = new Intent();
+                        intent.setAction(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                        intent.setData(Uri.fromParts("package", getPackageName(), null));
+                        startActivity(intent);
+                    }
+                }
+                File file = new File(zimFilePath);
+                if (!file.exists()) {
+                    showMediaCountText.setText("File not found, please check the path you have entered");
+                    return;
+                }
+                if (!file.canRead()) {
+                    showMediaCountText.setText("Could not read file, please give the storage permission from app setting");
+                    return;
+                }
+                archive = new Archive(file.getCanonicalPath());
+                int articlePath = archive.getMediaCount();
+                showMediaCountText.setText("Media count = " + articlePath);
+            } catch (Exception e) {
+                showMediaCountText.setText("Error in getting media count \n" + e.getMessage());
+                Log.e("ZIM_FILE_READER", "Error in getting the favicon path " + e);
+            }
+        });
     }
 
     private String loadICUData(Context context) {
